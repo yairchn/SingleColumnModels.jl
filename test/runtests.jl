@@ -21,3 +21,11 @@ for submodule in [
   println("Testing $submodule")
   include(joinpath("..", "integration_tests", submodule*".jl"))
 end
+
+for submodule in [
+                  "TRMM_LBA",
+                  ]
+
+  println("Testing $submodule")
+  include(joinpath("..", "integration_tests", submodule*".jl"))
+end
