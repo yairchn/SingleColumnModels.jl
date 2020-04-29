@@ -157,14 +157,23 @@ function compute_subdomain_statistics!(grid::Grid{FT}, i, q, tmp, params, model:
         outer_src[i_SH_qt]  += inner_src[i_SH_qt]  * weights[j_qt] * sqpi_inv
       end
 
-      tmp[:CF, k, i]           = outer_env[i_cf]
-      tmp[:t_cloudy, k, i]     = outer_env[i_T]
-      tmp[:q_tot_cloudy, k, i] = outer_env[i_qt_cld]
-      tmp[:q_vap_cloudy, k, i] = outer_env[i_qt_cld] - outer_env[i_ql]
-      tmp[:q_tot_dry, k, i]    = outer_env[i_qt_dry]
+      # tmp[:CF, k, i]           = outer_env[i_cf]
+      # tmp[:t_cloudy, k, i]     = outer_env[i_T]
+      # tmp[:q_tot_cloudy, k, i] = outer_env[i_qt_cld]
+      # tmp[:q_vap_cloudy, k, i] = outer_env[i_qt_cld] - outer_env[i_ql]
+      # tmp[:q_tot_dry, k, i]    = outer_env[i_qt_dry]
+      # ts = TemperatureSHumEquil(param_set, tmp[:t_cloudy, k], p_0=tmp[:p_0, k, i], tmp[:q_tot_cloudy, k, i])
+      # tmp[:θ_cloudy, k, i] = liquid_ice_pottemp(ts)
+      # tmp[:θ_dry, k, i] = dry_pottemp(ts)
+
+      tmp[:CF, k]           = outer_env[i_cf]
+      tmp[:t_cloudy, k]     = outer_env[i_T]
+      tmp[:q_tot_cloudy, k] = outer_env[i_qt_cld]
+      tmp[:q_vap_cloudy, k] = outer_env[i_qt_cld] - outer_env[i_ql]
+      tmp[:q_tot_dry, k]    = outer_env[i_qt_dry]
       ts = TemperatureSHumEquil(param_set, tmp[:t_cloudy, k], p_0=tmp[:p_0, k, i], tmp[:q_tot_cloudy, k, i])
-      tmp[:θ_cloudy, k, i] = liquid_ice_pottemp(ts)
-      tmp[:θ_dry, k, i] = dry_pottemp(ts)
+      tmp[:θ_cloudy, k] = liquid_ice_pottemp(ts)
+      tmp[:θ_dry, k] = dry_pottemp(ts)
     end
   end
 end
@@ -275,14 +284,23 @@ function compute_subdomain_statistics!(grid::Grid{FT}, i, q, tmp, params, model:
         outer_src[i_SH_qt]  += inner_src[i_SH_qt]  * weights[j_qt] * sqpi_inv
       end
 
-      tmp[:CF, k, i]           = outer_env[i_cf]
-      tmp[:t_cloudy, k, i]     = outer_env[i_T]
-      tmp[:q_tot_cloudy, k, i] = outer_env[i_qt_cld]
-      tmp[:q_vap_cloudy, k, i] = outer_env[i_qt_cld] - outer_env[i_ql]
-      tmp[:q_tot_dry, k, i]    = outer_env[i_qt_dry]
+      # tmp[:CF, k, i]           = outer_env[i_cf]
+      # tmp[:t_cloudy, k, i]     = outer_env[i_T]
+      # tmp[:q_tot_cloudy, k, i] = outer_env[i_qt_cld]
+      # tmp[:q_vap_cloudy, k, i] = outer_env[i_qt_cld] - outer_env[i_ql]
+      # tmp[:q_tot_dry, k, i]    = outer_env[i_qt_dry]
+      # ts = TemperatureSHumEquil(param_set, tmp[:t_cloudy, k], p_0=tmp[:p_0, k, i], tmp[:q_tot_cloudy, k, i])
+      # tmp[:θ_cloudy, k, i] = liquid_ice_pottemp(ts)
+      # tmp[:θ_dry, k, i] = dry_pottemp(ts)
+
+      tmp[:CF, k]           = outer_env[i_cf]
+      tmp[:t_cloudy, k]     = outer_env[i_T]
+      tmp[:q_tot_cloudy, k] = outer_env[i_qt_cld]
+      tmp[:q_vap_cloudy, k] = outer_env[i_qt_cld] - outer_env[i_ql]
+      tmp[:q_tot_dry, k]    = outer_env[i_qt_dry]
       ts = TemperatureSHumEquil(param_set, tmp[:t_cloudy, k], p_0=tmp[:p_0, k, i], tmp[:q_tot_cloudy, k, i])
-      tmp[:θ_cloudy, k, i] = liquid_ice_pottemp(ts)
-      tmp[:θ_dry, k, i] = dry_pottemp(ts)
+      tmp[:θ_cloudy, k] = liquid_ice_pottemp(ts)
+      tmp[:θ_dry, k] = dry_pottemp(ts)
     end
   end
 end

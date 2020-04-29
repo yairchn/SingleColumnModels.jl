@@ -98,7 +98,7 @@ function compute_mixing_length! end
 function compute_mixing_length!(grid::Grid{FT}, q, tmp, params, model::ConstantMixingLength) where FT
   gm, en, ud, sd, al = allcombinations(q)
   @inbounds for k in over_elems(grid)
-    tmp[:l_mix, k, gm] = model.value
+    tmp[:l_mix, k, en] = model.value
   end
 end
 
@@ -113,7 +113,7 @@ function compute_mixing_length!(grid::Grid{FT}, q, tmp, params, model::SCAMPyMix
     z = grid.zc[k]
     ξ = z/obukhov_length
     l2 = k_Karman * z * ϕ_m(ξ, a_L, b_L)
-    tmp[:l_mix, k, gm] = max( 1/(1/max(l1,1e-10) + 1/l2), FT(1e-3))
+    tmp[:l_mix, k, en] = max( 1/(1/max(l1,1e-10) + 1/l2), FT(1e-3))
   end
 end
 
@@ -150,7 +150,7 @@ function compute_mixing_length!(grid::Grid{FT}, q, tmp, params, model::IgnaciosM
     end
     discriminant2 = S_squared - tmp[:∇buoyancy, k, gm]/Pr_z
     L[3] = sqrt(model.c_ε/model.c_K)*sqrt(TKE_k)*1/sqrt(max(discriminant2, 1e-2))
-    tmp[:l_mix, k, gm] = sum([L[j]*exp(-L[j]) for j in 1:3])/sum([exp(-L[j]) for j in 1:3])
+    tmp[:l_mix, k, en] = sum([L[j]*exp(-L[j]) for j in 1:3])/sum([exp(-L[j]) for j in 1:3])
   end
 end
 
@@ -161,9 +161,9 @@ function compute_mixing_length!(grid::Grid{FT}, q, tmp, params, model::MinimumDi
   L = Vector(undef, 3)
   a_L = model.a_L(obukhov_length)
   b_L = model.b_L(obukhov_length)
-  grav::FT = grav(param_set)
-  # _Rm::FT = gas_constant_air(param_set, q)
+  gravitation= FT(grav(param_set))
   Rd::FT = FT(R_d(param_set))
+  k_1 = first_interior(grid, Zmin())
 
   eps_vi::FT = FT(molmass_ratio(param_set))
   @inbounds for k in over_elems_real(grid)
@@ -173,8 +173,8 @@ function compute_mixing_length!(grid::Grid{FT}, q, tmp, params, model::MinimumDi
                 ∇_z_flux(q[:v, Dual(k), gm], grid)^2 +
                 ∇_z_flux(q[:w, Dual(k), en], grid)^2
     Π = exner_given_pressure(param_set, tmp[:p_0, k])
-    lv::FT = latent_heat_vapor(param_set, tmp[:t_cloudy, k, en]) # lv = latent_heat(t_cloudy)
-    cpm::FT = cp_m(param_set, q) # cpm = cpm_c(qt_cloudy)
+    lv::FT = latent_heat_vapor(param_set, tmp[:t_cloudy, k]) # lv = latent_heat(t_cloudy)
+    cpm = cp_m(param_set, PhasePartition(tmp[:q_tot_cloudy, k]))
     TKE_k = max(q[:tke, k, en], FT(0))
 
     # compute L1 - static stability
@@ -182,7 +182,7 @@ function compute_mixing_length!(grid::Grid{FT}, q, tmp, params, model::MinimumDi
     ts_dual = ActiveThermoState(param_set, q, tmp, Dual(k), en)
     θ_ρ_dual = virtual_pottemp.(ts_dual)
     ∇θ_ρ = ∇_z_flux(θ_ρ_dual, grid)
-    buoyancy_freq = grav*∇θ_ρ/θ_ρ
+    buoyancy_freq = gravitation*∇θ_ρ/θ_ρ
     if buoyancy_freq>0
       L[1] = sqrt(model.c_w*TKE_k)/buoyancy_freq
     else
@@ -191,10 +191,10 @@ function compute_mixing_length!(grid::Grid{FT}, q, tmp, params, model::MinimumDi
 
     # compute L2 - law of the wall
     if obukhov_length < 0.0 #unstable case
-      L[2] = (k_Karman * z/(sqrt(max(q[:tke, gw, en], FT(0))/ustar/ustar)* model.c_K) * fmin(
+      L[2] = (k_Karman * z/(sqrt(max(q[:tke, k_1, en], FT(0))/ustar/ustar)* model.c_K) * min(
          (1 - 100 * z/obukhov_length)^0.2, 1/k_Karman ))
     else # neutral or stable cases
-      L[2] = k_Karman * z/(sqrt(max(q[:tke, gw, en], FT(0))/ustar/ustar)*model.c_K)
+      L[2] = k_Karman * z/(sqrt(max(q[:tke, k_1, en], FT(0))/ustar/ustar)*model.c_K)
     end
 
     # I think this is an alrenative way for the same computation
@@ -203,49 +203,56 @@ function compute_mixing_length!(grid::Grid{FT}, q, tmp, params, model::MinimumDi
     L[2] = k_Karman*z/(model.c_K*κ_star*ϕ_m(ξ, a_L, b_L))
 
     # compute L3 - entrainment detrainment sources
-    prefactor = grav * (Rd * tmp[:ρ_0, k] / tmp[:p_0, k]) * Π
-    dbdθl_dry = prefactor * (1 + (eps_vi-1) * tmp[:q_tot_dry, k, en])
-    dbdqt_dry = prefactor * tmp[:θ_dry, k, en] * (eps_vi-1)
-    if tmp[:CF,k,en] > 0
-      dbdθl_cloudy = (prefactor * (1 + eps_vi * (1 + lh / Rv / tmp[:t_cloudy, k, en]) * tmp[:q_vap_cloudy, k, en] - tmp[:q_tot_cloudy, k, en])
-                            / (1 + lh * lh / cpm / Rv / tmp[:t_cloudy, k, en] / tmp[:t_cloudy, k, en] * tmp[:q_vap_cloudy, k, en]))
-      dbdqt_cloudy = (lh / cpm / tmp[:t_cloudy, k, en] * dbdθl_cloudy - prefactor) * tmp[:θ_cloudy, k, en]
+    prefactor = gravitation * (Rd * tmp[:ρ_0, k] / tmp[:p_0, k]) * Π
+    dbdθl_dry = prefactor * (1 + (eps_vi-1) * tmp[:q_tot_dry, k])
+    dbdqt_dry = prefactor * tmp[:θ_dry, k] * (eps_vi-1)
+    if tmp[:CF,k] > 0
+      dbdθl_cloudy = (prefactor * (1 + eps_vi * (1 + lh / Rv / tmp[:t_cloudy, k]) * tmp[:q_vap_cloudy, k] - tmp[:q_tot_cloudy, k])
+                            / (1 + lh * lh / cpm / Rv / tmp[:t_cloudy, k] / tmp[:t_cloudy, k] * tmp[:q_vap_cloudy, k]))
+      dbdqt_cloudy = (lh / cpm / tmp[:t_cloudy, k] * dbdθl_cloudy - prefactor) * tmp[:θ_cloudy, k]
     else
       dbdθl_cloudy = 0
       dbdqt_cloudy = 0
     end
     # partial buoyancy gradients
-    ∂b∂θl = (tmp[:CF,k,en] * dbdθl_cloudy
-                  + (1-tmp[:CF,k,en]) * dbdθl_dry)
-    ∂b∂qt = (tmp[:CF,k,en] * dbdqt_cloudy
-                  + (1-tmp[:CF,k,en]) * dbdqt_dry)
+    ∂b∂θl = (tmp[:CF,k] * dbdθl_cloudy
+                  + (1-tmp[:CF,k]) * dbdθl_dry)
+    ∂b∂qt = (tmp[:CF,k] * dbdqt_cloudy
+                  + (1-tmp[:CF,k]) * dbdqt_dry)
     # chain rule
-    ∂b∂z_θl = ∇_z_flux(θ_liq, grid) * ∂b∂θl
-    ∂b∂z_qt = ∇_z_flux(q_tot, grid) * ∂b∂qt
-    Grad_Ri = min(∂b∂z_θl/max(TKE_Shear, eps(FT)) + ∂b∂z_qt/fmax(TKE_Shear, eps(FT)) , 0.25)
+    # ∂b∂z_θl = ∇_z_flux(q[:θ_liq,k,en], grid) * ∂b∂θl
+    # ∂b∂z_qt = ∇_z_flux(q[:q_tot,k,en], grid) * ∂b∂qt
+    ∂b∂z_θl = ∇_z_flux(q[:θ_liq,Dual(k),en], grid) * ∂b∂θl
+    ∂b∂z_qt = ∇_z_flux(q[:q_tot,Dual(k),en], grid) * ∂b∂qt
+    Grad_Ri = min(∂b∂z_θl/max(TKE_Shear, eps(FT)) + ∂b∂z_qt/max(TKE_Shear, eps(FT)) , 0.25)
     if unstable(obukhov_length)
       Pr_z = model.Prandtl_neutral
     else
-      Pr_z[k] = model.Prandtl_neutral*(2*Grad_Ri/
+      Pr_z = model.Prandtl_neutral*(2*Grad_Ri/
                         (1+(53/13)*Grad_Ri -sqrt( (1+(53/130)*Grad_Ri)^2 - 4*Grad_Ri ) ) )
     end
     # Production/destruction terms
-    a = model.c_ε*(TKE_Shear - ∂b∂z_θl/Pr_z[k] - ∂b∂z_qt/Pr_z[k])* sqrt(TKE_k)
+    a = model.c_ε*(TKE_Shear - ∂b∂z_θl/Pr_z - ∂b∂z_qt/Pr_z)* sqrt(TKE_k)
     # Dissipation term
-    b[k] = 0.0
-    @inbounds for i in ud
-        b[k] += q[:a, k, i]*q[:w, k, i]*tmp[:δ_model, k, i]/q[:a, k, en]*((q[:w, k, i]-q[:w, k, en])^2/2.0-TKE_k) - q[:a, k, i]*q[:w, k, i]*(
-            q[:w, k, i]-q[:w, k, en])*tmp[:εt_model, k, i]*q[:w, k, en]/q[:a, k, en]
-    end
-    c_neg = model.c_ε*TKE_k*sqrt(TKE_k)
-    if abs(a) > eps(FT) && 4*a*c_neg > - b[k]^2
-              l_entdet[k] = max( -b[k]/2.0/a + sqrt(b[k]^2 + 4*a*c_neg)/2/a, 0)
-    elseif abs(a) < eps(FT) && abs(b[k]) > eps(FT)
-              l_entdet[k] = c_neg/b[k]
-    end
-    L[3] = l_entdet[k]
+    b = 0.0
 
-    # eps(FT) is missing
-    tmp[:l_mix, k, en] =lamb_smooth_minimum(L, 0.1, 1.5)
+    @inbounds for i in ud
+      b += q[:a, k, i]*q[:w, k, i]*tmp[:δ_model, k, i]/q[:a, k, en]*(
+          (q[:w, k, i]-q[:w, k, en])*(q[:w, k, i]-q[:w, k, en])/2-TKE_k) - q[:a, k, i]*q[:w, k, i]*(
+          q[:w, k, i]-q[:w, k, en])*tmp[:ε_model, k, i]*q[:w, k, en]/q[:a, k, en]
+    #     #                         tmp[:ε_model, k, i]
+    end
+
+    c_neg = model.c_ε*TKE_k*sqrt(TKE_k)
+    if abs(a) > eps(FT) && 4*a*c_neg > - b^2
+              l_entdet = max( -b/2.0/a + sqrt(b^2 + 4*a*c_neg)/2/a, 0)
+    elseif abs(a) < eps(FT) && abs(b) > eps(FT)
+              l_entdet = c_neg/b
+    else
+      l_entdet = 0.0
+    end
+    L[3] = l_entdet
+
+    tmp[:l_mix, k, en] = lamb_smooth_minimum(L, 0.1, 1.5)
   end
 end

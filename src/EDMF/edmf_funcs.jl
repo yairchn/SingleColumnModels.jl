@@ -198,7 +198,7 @@ function compute_new_gm_scalars!(grid, q_new, q, q_tendencies, params, tmp, tri_
   gm, en, ud, sd, al = allcombinations(q)
 
   @inbounds for k in over_elems_real(grid)
-    tri_diag[:ρaK, k] = q[:a, k, en]*tmp[:K_h, k, gm]*tmp[:ρ_0, k]
+    tri_diag[:ρaK, k] = q[:a, k, en]*tmp[:K_h, k, en]*tmp[:ρ_0, k]
   end
   construct_tridiag_diffusion_O1!(grid, q, tmp, params[:Δt][1], tri_diag)
 
@@ -324,7 +324,7 @@ function compute_cv_shear!(grid::Grid{FT}, q, tmp, tmp_O2, ϕ, ψ, cv) where FT
       grad_ϕ = grad(q[ϕ, Cut(k), en], grid)
       grad_ψ = grad(q[ψ, Cut(k), en], grid)
     end
-    ρaK = tmp[:ρ_0, k] * q[:a, k, en] * tmp[:K_h, k, gm]
+    ρaK = tmp[:ρ_0, k] * q[:a, k, en] * tmp[:K_h, k, en]
     tmp_O2[cv][:shear, k] = tke_factor*2*ρaK * (grad_ϕ*grad_ψ + grad_u^2 + grad_v^2)
   end
 end
@@ -398,14 +398,14 @@ function construct_tridiag_diffusion_O2!(grid::Grid{FT}, q, tmp, params, tri_dia
     ρ_0_cut = tmp[:ρ_0, Cut(k)]
     ae_cut = q[:a, Cut(k), en]
     w_cut = q[:w, Cut(k), en]
-    ρa_K = q[:a, Cut(k), en] .* tmp[:K_h, Cut(k), gm] .* tmp[:ρ_0, Cut(k)]
+    ρa_K = q[:a, Cut(k), en] .* tmp[:K_h, Cut(k), en] .* tmp[:ρ_0, Cut(k)]
 
     D_env = sum([ρ_0_cut[2] *
                  q[:a, k, i] *
                  q[:w, k, i] *
                  tmp[:ε_model, k, i] for i in ud])
 
-    l_mix = max(tmp[:l_mix, k, gm], FT(1))
+    l_mix = max(tmp[:l_mix, k, en], FT(1))
     tke_env = max(q[:tke, k, en], FT(0))
 
     tri_diag[:a, k] = (- ρa_K[2] * Δzi2 )

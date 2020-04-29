@@ -79,7 +79,7 @@ function Params(param_set, ::BOMEX)
   # params[:SubdomainStatistics] = GaussianQuadrature{IT}(3)
   # params[:SubdomainStatistics] = LogNormalQuadrature{IT}(3)
   # Looks okay
-  params[:MixingLengthModel]      = ConstantMixingLength{FT}(100)
+  # params[:MixingLengthModel]      = ConstantMixingLength{FT}(100)
   # Looks okay
   # params[:MixingLengthModel]      = SCAMPyMixingLength{FT}(StabilityDependentParam{FT}(2.7,-100.0),
   #                                                          StabilityDependentParam{FT}(-1.0,-0.2))
@@ -89,9 +89,9 @@ function Params(param_set, ::BOMEX)
   #                                                        StabilityDependentParam{FT}(-1.0,-0.2),
   #                                                        0.1, 0.12, 0.4, 40/13, 0.74)
 
-  # params[:MixingLengthModel]      = MinimumDissipation(StabilityDependentParam{FT}(2.7,-100.0),
-  #                                                        StabilityDependentParam{FT}(-1.0,-0.2),
-  #                                                        0.1, 0.12, 0.4, 40/13, 0.74)
+  params[:MixingLengthModel]      = MinimumDissipation(StabilityDependentParam{FT}(2.7,-100.0),
+                                                         StabilityDependentParam{FT}(-1.0,-0.2),
+                                                         0.1, 0.12, 0.4, 40/13, 0.74)
 
   params[:EddyDiffusivityModel]   = SCAMPyEddyDiffusivity{FT}(0.1)
 

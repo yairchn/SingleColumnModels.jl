@@ -86,7 +86,7 @@ function compute_tke_buoy!(grid::Grid{FT}, q, tmp, tmp_O2, cv, params) where FT
     d_alpha_θ_liq_total = (CF_env * d_alpha_θ_liq_cloudy + (1-CF_env) * d_alpha_θ_liq_dry)
     d_alpha_q_tot_total = (CF_env * d_alpha_q_tot_cloudy + (1-CF_env) * d_alpha_q_tot_dry)
 
-    K_h_k = tmp[:K_h, k, gm]
+    K_h_k = tmp[:K_h, k, en]
     term_1 = - K_h_k * grad_θ_liq * d_alpha_θ_liq_total
     term_2 = - K_h_k * grad_q_tot * d_alpha_q_tot_total
 
