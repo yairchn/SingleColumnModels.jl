@@ -74,6 +74,10 @@ function Params(param_set, ::BOMEX)
   #####
 
   params[:EntrDetrModel]          = BOverW2{FT}(1, 1)
+
+  # params[:SubdomainStatistics] = SubdomainMean{IT}(1)
+  # params[:SubdomainStatistics] = GaussianQuadrature{IT}(3)
+  params[:SubdomainStatistics] = LogNormalQuadrature{IT}(3)
   # Looks okay
   params[:MixingLengthModel]      = ConstantMixingLength{FT}(100)
   # Looks okay

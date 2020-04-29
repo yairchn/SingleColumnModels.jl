@@ -16,7 +16,8 @@ function pre_compute_vars!(grid, q, tmp, tmp_O2, UpdVar, params)
   params[:wstar] = compute_convective_velocity(params[:bflux], params[:zi])
 
   compute_entrainment_detrainment!(grid, UpdVar, tmp, q, params, params[:EntrDetrModel])
-  compute_cloud_phys!(grid, q, tmp, params)
+  compute_subdomain_statistics!(grid, en, q, tmp, tmp_O2, params, params[:SubdomainStatistics])
+  # compute_cloud_phys!(grid, q, tmp, params)
   compute_buoyancy!(grid, q, tmp, params)
   compute_pressure!(grid, q, tmp, params, params[:PressureModel])
 
@@ -33,6 +34,21 @@ function pre_compute_vars!(grid, q, tmp, tmp_O2, UpdVar, params)
   compute_cv_interdomain_src!(grid, q, tmp, tmp_O2, :w, :w, :tke, 0.5)
   compute_tke_pressure!(grid, q, tmp, tmp_O2, :tke, params, params[:PressureModel])
   compute_cv_env!(grid, q, tmp, tmp_O2, :w, :w, :tke, 0.5)
+
+  compute_cv_entr!(grid, q, tmp, tmp_O2, :θ_liq, :θ_liq, :cv_θ_liq, 1.0)
+  compute_cv_shear!(grid, q, tmp, tmp_O2, :θ_liq, :θ_liq, :tke)
+  compute_cv_interdomain_src!(grid, q, tmp, tmp_O2, :θ_liq, :θ_liq, :cv_θ_liq, 1.0)
+  compute_cv_env!(grid, q, tmp, tmp_O2, :θ_liq, :θ_liq, :cv_θ_liq, 1.0)
+
+  compute_cv_entr!(grid, q, tmp, tmp_O2, :q_tot, :q_tot, :cv_q_tot, 1.0)
+  compute_cv_shear!(grid, q, tmp, tmp_O2, :q_tot, :q_tot, :cv_q_tot)
+  compute_cv_interdomain_src!(grid, q, tmp, tmp_O2, :q_tot, :q_tot, :cv_q_tot, 1.0)
+  compute_cv_env!(grid, q, tmp, tmp_O2, :q_tot, :q_tot, :cv_q_tot, 1.0)
+
+  compute_cv_entr!(grid, q, tmp, tmp_O2, :θ_liq, :q_tot, :cv_θ_liq_q_tot, 1.0)
+  compute_cv_shear!(grid, q, tmp, tmp_O2, :θ_liq, :q_tot, :cv_θ_liq_q_tot)
+  compute_cv_interdomain_src!(grid, q, tmp, tmp_O2, :θ_liq, :q_tot, :cv_θ_liq_q_tot, 1.0)
+  compute_cv_env!(grid, q, tmp, tmp_O2, :θ_liq, :q_tot, :cv_θ_liq_q_tot, 1.0)
 
   cleanup_covariance!(grid, q)
 
