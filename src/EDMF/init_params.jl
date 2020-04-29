@@ -75,9 +75,9 @@ function Params(param_set, ::BOMEX)
 
   params[:EntrDetrModel]          = BOverW2{FT}(1, 1)
 
-  # params[:SubdomainStatistics] = SubdomainMean{IT}(1)
+  params[:SubdomainStatistics] = SubdomainMean{IT}(1)
   # params[:SubdomainStatistics] = GaussianQuadrature{IT}(3)
-  params[:SubdomainStatistics] = LogNormalQuadrature{IT}(3)
+  # params[:SubdomainStatistics] = LogNormalQuadrature{IT}(3)
   # Looks okay
   params[:MixingLengthModel]      = ConstantMixingLength{FT}(100)
   # Looks okay
@@ -86,6 +86,10 @@ function Params(param_set, ::BOMEX)
 
   # Getting NaNs for TKE and other fields. Something needs to be fixed
   # params[:MixingLengthModel]      = IgnaciosMixingLength(StabilityDependentParam{FT}(2.7,-100.0),
+  #                                                        StabilityDependentParam{FT}(-1.0,-0.2),
+  #                                                        0.1, 0.12, 0.4, 40/13, 0.74)
+
+  # params[:MixingLengthModel]      = MinimumDissipation(StabilityDependentParam{FT}(2.7,-100.0),
   #                                                        StabilityDependentParam{FT}(-1.0,-0.2),
   #                                                        0.1, 0.12, 0.4, 40/13, 0.74)
 
