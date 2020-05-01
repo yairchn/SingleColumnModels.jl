@@ -239,8 +239,7 @@ function compute_mixing_length!(grid::Grid{FT}, q, tmp, params, model::MinimumDi
     @inbounds for i in ud
       b += q[:a, k, i]*q[:w, k, i]*tmp[:δ_model, k, i]/q[:a, k, en]*(
           (q[:w, k, i]-q[:w, k, en])*(q[:w, k, i]-q[:w, k, en])/2-TKE_k) - q[:a, k, i]*q[:w, k, i]*(
-          q[:w, k, i]-q[:w, k, en])*tmp[:ε_model, k, i]*q[:w, k, en]/q[:a, k, en]
-    #     #                         tmp[:ε_model, k, i]
+          q[:w, k, i]-q[:w, k, en])*tmp[:εt_model, k, i]*q[:w, k, en]/q[:a, k, en]
     end
 
     c_neg = model.c_ε*TKE_k*sqrt(TKE_k)
