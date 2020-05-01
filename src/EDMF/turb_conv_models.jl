@@ -78,6 +78,7 @@ function TurbConv(params, case::Case)
   (:∇buoyancy              , DomainSubSet(gm=true)),
   (:δ_model                , DomainSubSet(ud=true)),
   (:ε_model                , DomainSubSet(ud=true)),
+  (:εt_model               , DomainSubSet(ud=true)),
   (:l_mix                  , DomainSubSet(en=true)),
   (:K_m                    , DomainSubSet(en=true)),
   (:K_h                    , DomainSubSet(en=true)),
