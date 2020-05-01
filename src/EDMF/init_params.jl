@@ -73,13 +73,13 @@ function Params(param_set, ::BOMEX)
   ##### Physical models
   #####
 
-  # params[:EntrDetrModel]          = BOverW2{FT}(1, 1)
+  params[:EntrDetrModel]          = BOverW2{FT}(1, 1)
   # MoistureDeficit params:                             c_ε, c_δ, β_power,  μ_sigmoid, χ,    c_trub  entr_tke_fac
-  params[:EntrDetrModel]          = MoistureDeficit{FT}(0.1, 0.5, 2.0,      0.0004,    0.25, 0.4,    0.3)
+  # params[:EntrDetrModel]          = MoistureDeficit{FT}(0.1, 0.5, 2.0,      0.0004,    0.25, 0.4,    0.3)
 
-  # params[:SubdomainStatistics] = SubdomainMean{IT}(1)
+  params[:SubdomainStatistics] = SubdomainMean{IT}(1)
   # params[:SubdomainStatistics] = GaussianQuadrature{IT}(3)
-  params[:SubdomainStatistics] = LogNormalQuadrature{IT}(3)
+  # params[:SubdomainStatistics] = LogNormalQuadrature{IT}(3)
   # Looks okay
   # params[:MixingLengthModel]      = ConstantMixingLength{FT}(100)
   # Looks okay
