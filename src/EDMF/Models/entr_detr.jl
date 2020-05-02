@@ -108,9 +108,12 @@ function compute_cv_entr!(grid::Grid{FT}, q, tmp, tmp_O2, ϕ, ψ, cv, tke_factor
   @inbounds for k in over_elems_real(grid)
     tmp_O2[cv][:entr_gain, k] = FT(0)
     @inbounds for i in ud
-      Δϕ = q[ϕ, k, i] - q[ϕ, k, en]
-      Δψ = q[ψ, k, i] - q[ψ, k, en]
-      tmp_O2[cv][:entr_gain, k] += tke_factor*q[:a, k, i] * abs(q[:w, k, i]) * tmp[:δ_model, k, i] * Δϕ * Δψ
+      Δϕ      = q[ϕ, k, i] - q[ϕ, k, en]
+      Δψ      = q[ψ, k, i] - q[ψ, k, en]
+      Δψ_star = q[ψ, k, i] - q[ψ, k, gm]
+      Δϕ_star = q[ϕ, k, i] - q[ϕ, k, gm]
+      tmp_O2[cv][:entr_gain, k] +=  (tke_factor*q[:a, k, i]*abs(q[:w, k, i]) *
+          tmp[:δ_model, k, i]*Δϕ*Δψ + tmp[:εt_model, k, i]*(Δϕ_star*Δϕ + Δψ_star*Δψ))
     end
     tmp_O2[cv][:entr_gain, k] *= tmp[:ρ_0, k]
   end

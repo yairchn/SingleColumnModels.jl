@@ -50,47 +50,52 @@ function compute_tke_buoy!(grid::Grid{FT}, q, tmp, tmp_O2, cv, params) where FT
   _R_v::FT = R_v(param_set)
   _R_d::FT = R_d(param_set)
   _grav::FT = grav(param_set)
+  is_tke = cv==:tke
 
   # Note that source terms at the first interior point are not really used because that is where tke boundary condition is
   # enforced (according to MO similarity). Thus here I am being sloppy about lowest grid point
   @inbounds for k in over_elems_real(grid)
-    q_tot_dry    = tmp[:q_tot_dry, k]
-    θ_dry        = tmp[:θ_dry, k]
-    t_cloudy     = tmp[:t_cloudy, k]
-    q_vap_cloudy = tmp[:q_vap_cloudy, k]
-    q_tot_cloudy = tmp[:q_tot_cloudy, k]
-    θ_cloudy     = tmp[:θ_cloudy, k]
-    p_0          = tmp[:p_0, k]
+    if is_tke
+      q_tot_dry    = tmp[:q_tot_dry, k]
+      θ_dry        = tmp[:θ_dry, k]
+      t_cloudy     = tmp[:t_cloudy, k]
+      q_vap_cloudy = tmp[:q_vap_cloudy, k]
+      q_tot_cloudy = tmp[:q_tot_cloudy, k]
+      θ_cloudy     = tmp[:θ_cloudy, k]
+      p_0          = tmp[:p_0, k]
 
-    lh = latent_heat_vapor(param_set, t_cloudy)
-    cpm = cp_m(param_set, PhasePartition(q_tot_cloudy))
-    grad_θ_liq = ∇_dn(q[:θ_liq, Cut(k), en], grid)
-    grad_q_tot = ∇_dn(q[:q_tot, Cut(k), en], grid)
+      lh = latent_heat_vapor(param_set, t_cloudy)
+      cpm = cp_m(param_set, PhasePartition(q_tot_cloudy))
+      grad_θ_liq = ∇_dn(q[:θ_liq, Cut(k), en], grid)
+      grad_q_tot = ∇_dn(q[:q_tot, Cut(k), en], grid)
 
-    prefactor = _R_d * exner_given_pressure(param_set, p_0)/p_0
-    ε_vi = _R_v / _R_d
+      prefactor = _R_d * exner_given_pressure(param_set, p_0)/p_0
+      ε_vi = _R_v / _R_d
 
-    d_alpha_θ_liq_dry = prefactor * (1 + (ε_vi - 1) * q_tot_dry)
-    d_alpha_q_tot_dry = prefactor * θ_dry * (ε_vi - 1)
-    CF_env = tmp[:CF, k]
+      d_alpha_θ_liq_dry = prefactor * (1 + (ε_vi - 1) * q_tot_dry)
+      d_alpha_q_tot_dry = prefactor * θ_dry * (ε_vi - 1)
+      CF_env = tmp[:CF, k]
 
-    if CF_env > 0
-      d_alpha_θ_liq_cloudy = (prefactor * (1 + ε_vi * (1 + lh / _R_v / t_cloudy) * q_vap_cloudy - q_tot_cloudy )
-                               / (1 + lh * lh / cpm / _R_v / t_cloudy / t_cloudy * q_vap_cloudy))
-      d_alpha_q_tot_cloudy = (lh / cpm / t_cloudy * d_alpha_θ_liq_cloudy - prefactor) * θ_cloudy
+      if CF_env > 0
+        d_alpha_θ_liq_cloudy = (prefactor * (1 + ε_vi * (1 + lh / _R_v / t_cloudy) * q_vap_cloudy - q_tot_cloudy )
+                                 / (1 + lh * lh / cpm / _R_v / t_cloudy / t_cloudy * q_vap_cloudy))
+        d_alpha_q_tot_cloudy = (lh / cpm / t_cloudy * d_alpha_θ_liq_cloudy - prefactor) * θ_cloudy
+      else
+        d_alpha_θ_liq_cloudy = 0
+        d_alpha_q_tot_cloudy = 0
+      end
+
+      d_alpha_θ_liq_total = (CF_env * d_alpha_θ_liq_cloudy + (1-CF_env) * d_alpha_θ_liq_dry)
+      d_alpha_q_tot_total = (CF_env * d_alpha_q_tot_cloudy + (1-CF_env) * d_alpha_q_tot_dry)
+
+      K_h_k = tmp[:K_h, k, en]
+      term_1 = - K_h_k * grad_θ_liq * d_alpha_θ_liq_total
+      term_2 = - K_h_k * grad_q_tot * d_alpha_q_tot_total
+
+      # TODO - check
+      tmp_O2[cv][:buoy, k] = _grav / tmp[:α_0, k] * q[:a, k, en] * tmp[:ρ_0, k] * (term_1 + term_2)
     else
-      d_alpha_θ_liq_cloudy = 0
-      d_alpha_q_tot_cloudy = 0
+      tmp_O2[cv][:buoy, k] = 0.0
     end
-
-    d_alpha_θ_liq_total = (CF_env * d_alpha_θ_liq_cloudy + (1-CF_env) * d_alpha_θ_liq_dry)
-    d_alpha_q_tot_total = (CF_env * d_alpha_q_tot_cloudy + (1-CF_env) * d_alpha_q_tot_dry)
-
-    K_h_k = tmp[:K_h, k, en]
-    term_1 = - K_h_k * grad_θ_liq * d_alpha_θ_liq_total
-    term_2 = - K_h_k * grad_q_tot * d_alpha_q_tot_total
-
-    # TODO - check
-    tmp_O2[cv][:buoy, k] = _grav / tmp[:α_0, k] * q[:a, k, en] * tmp[:ρ_0, k] * (term_1 + term_2)
   end
 end
