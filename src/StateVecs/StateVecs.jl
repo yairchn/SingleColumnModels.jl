@@ -1,4 +1,3 @@
-"""
     StateVecs
 
 Provides a state vector that is includes information
