@@ -107,7 +107,7 @@ function compute_tke_pressure!(grid::Grid{FT}, UpdVar, q, tmp, tmp_O2, cv, param
         nh_press_buoy = - ρa_k * B_k * model.buoy_coef
         nh_pressure_adv = ρa_k * model.nh_avd_coef*w_i*dwdz
         nh_pressure_drag = - ρa_k * model.nh_drag_coef * (w_i - w_env)*abs(w_i - w_env)/max(UpdVar[i].cloud.updraft_top, 500.0)
-        tmp_O2[cv][:press, k] += (w_env-w_i)* nh_pressure_drag
+        tmp_O2[cv][:press, k] += (w_env-w_i) * (nh_press_buoy + nh_pressure_adv + nh_pressure_drag)
       end
     end
   end
